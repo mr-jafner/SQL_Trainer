@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQL Learning Platform</title>
+  <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .print-hidden { display: none !important; }
+      .print-block { display: block !important; }
+    }
+    .animate-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .5; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect, useCallback, useRef } = React;
+
+    // ============================================================
+    // ICONS (inline SVG components)
+    // ============================================================
+    
+    const Icon = ({ path, size = 16, className = "", ...props }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+        {path}
+      </svg>
+    );
+    
+    const ChevronRight = (props) => <Icon {...props} path={<polyline points="9 18 15 12 9 6"/>} />;
+    const ChevronDown = (props) => <Icon {...props} path={<polyline points="6 9 12 15 18 9"/>} />;
+    const Check = (props) => <Icon {...props} path={<polyline points="20 6 9 17 4 12"/>} />;
+    const AlertTriangle = (props) => <Icon {...props} path={<><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>} />;
+    const Database = (props) => <Icon {...props} path={<><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></>} />;
+    const Server = (props) => <Icon {...props} path={<><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></>} />;
+    const Cloud = (props) => <Icon {...props} path={<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>} />;
+    const ArrowRight = (props) => <Icon {...props} path={<><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></>} />;
+    const Circle = (props) => <Icon {...props} path={<circle cx="12" cy="12" r="10"/>} />;
+    const Diamond = (props) => <Icon {...props} path={<rect x="12" y="1" width="15.56" height="15.56" rx="2" transform="rotate(45 12 12)"/>} />;
+    const Eye = (props) => <Icon {...props} path={<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>} />;
+    const EyeOff = (props) => <Icon {...props} path={<><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>} />;
+    const BookOpen = (props) => <Icon {...props} path={<><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></>} />;
+    const Map = (props) => <Icon {...props} path={<><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></>} />;
+    const GitBranch = (props) => <Icon {...props} path={<><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></>} />;
+    const Layers = (props) => <Icon {...props} path={<><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></>} />;
+    const RefreshCw = (props) => <Icon {...props} path={<><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></>} />;
+    const CheckCircle2 = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><polyline points="9 12 12 15 16 10"/></>} />;
+    const XCircle = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></>} />;
+    const Play = (props) => <Icon {...props} path={<polygon points="5 3 19 12 5 21 5 3"/>} />;
+    const Terminal = (props) => <Icon {...props} path={<><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></>} />;
+    const Info = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></>} />;
+    const Lightbulb = (props) => <Icon {...props} path={<><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></>} />;
+    const AlertCircle = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} />;
+    const Code = (props) => <Icon {...props} path={<><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></>} />;
+    const Table = (props) => <Icon {...props} path={<><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></>} />;
+    const Star = (props) => <Icon {...props} path={<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>} />;
+    const Download = (props) => <Icon {...props} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>} />;
+    const Printer = (props) => <Icon {...props} path={<><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></>} />;
+    const MessageSquare = (props) => <Icon {...props} path={<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>} />;
+    const Keyboard = (props) => <Icon {...props} path={<><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="8" x2="6" y2="8"/><line x1="10" y1="8" x2="10" y2="8"/><line x1="14" y1="8" x2="14" y2="8"/><line x1="18" y1="8" x2="18" y2="8"/><line x1="6" y1="12" x2="6" y2="12"/><line x1="10" y1="12" x2="10" y2="12"/><line x1="14" y1="12" x2="14" y2="12"/><line x1="18" y1="12" x2="18" y2="12"/><line x1="8" y1="16" x2="16" y2="16"/></>} />;
+    const Shuffle = (props) => <Icon {...props} path={<><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></>} />;
+    const X = (props) => <Icon {...props} path={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} />;
+    const HelpCircle = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></>} />;
+
+    // ============================================================
+    // STORAGE UTILITIES (localStorage)
+    // ============================================================
+    
+    const STORAGE_KEY = 'sql-learning-progress-v3';
+    const NOTES_KEY = 'sql-learning-notes-v1';
+
+    const saveProgress = (progress) => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+      } catch (e) {
+        console.error('Failed to save progress:', e);
+      }
+    };
+
+    const loadProgress = () => {
+      try {
+        const data = localStorage.getItem(STORAGE_KEY);
+        return data ? JSON.parse(data) : null;
+      } catch (e) {
+        console.error('Failed to load progress:', e);
+        return null;
+      }
+    };
+
+    const saveNotes = (notes) => {
+      try {
+        localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+      } catch (e) {
+        console.error('Failed to save notes:', e);
+      }
+    };
+
+    const loadNotes = () => {
+      try {
+        const data = localStorage.getItem(NOTES_KEY);
+        return data ? JSON.parse(data) : null;
+      } catch (e) {
+        console.error('Failed to load notes:', e);
+        return null;
+      }
+    };
+
+    // ============================================================
+    // SQL EXERCISE ENGINE
+    // ============================================================
+
+    const sampleDatabase = {
+      users: [
+        { id: 1, name: 'Alice', email: 'alice@example.com', role: 'admin', created_at: '2024-01-15' },
+        { id: 2, name: 'Bob', email: 'bob@example.com', role: 'user', created_at: '2024-02-20' },
+        { id: 3, name: 'Carol', email: 'carol@example.com', role: 'user', created_at: '2024-03-10' },
+        { id: 4, name: 'David', email: 'david@example.com', role: 'moderator', created_at: '2024-03-15' },
+      ],
+      posts: [
+        { id: 1, user_id: 1, title: 'Getting Started with SQL', content: 'SQL is...', published: true, created_at: '2024-01-20' },
+        { id: 2, user_id: 1, title: 'Advanced Queries', content: 'JOINs are...', published: true, created_at: '2024-02-01' },
+        { id: 3, user_id: 2, title: 'My First Post', content: 'Hello...', published: true, created_at: '2024-02-25' },
+        { id: 4, user_id: 3, title: 'Draft Post', content: 'WIP...', published: false, created_at: '2024-03-12' },
+        { id: 5, user_id: 2, title: 'PostgreSQL Tips', content: 'Postgres...', published: true, created_at: '2024-03-20' },
+      ],
+      comments: [
+        { id: 1, post_id: 1, user_id: 2, text: 'Great intro!', created_at: '2024-01-21' },
+        { id: 2, post_id: 1, user_id: 3, text: 'Very helpful', created_at: '2024-01-22' },
+        { id: 3, post_id: 2, user_id: 3, text: 'I learned a lot', created_at: '2024-02-02' },
+        { id: 4, post_id: 3, user_id: 1, text: 'Welcome!', created_at: '2024-02-26' },
+        { id: 5, post_id: 5, user_id: 4, text: 'Nice tips', created_at: '2024-03-21' },
+      ],
+      orders: [
+        { id: 1, user_id: 1, total: 99.99, status: 'completed', created_at: '2024-01-25' },
+        { id: 2, user_id: 2, total: 149.50, status: 'completed', created_at: '2024-02-28' },
+        { id: 3, user_id: 1, total: 75.00, status: 'pending', created_at: '2024-03-15' },
+        { id: 4, user_id: 3, total: 200.00, status: 'completed', created_at: '2024-03-18' },
+      ]
+    };
+
+    const schemaDefinitions = {
+      users: {
+        description: 'User accounts',
+        columns: [
+          { name: 'id', type: 'INT', note: 'Primary key' },
+          { name: 'name', type: 'TEXT', note: '' },
+          { name: 'email', type: 'TEXT', note: 'Unique' },
+          { name: 'role', type: 'TEXT', note: 'admin, user, moderator' },
+          { name: 'created_at', type: 'DATE', note: '' },
+        ],
+        relationships: []
+      },
+      posts: {
+        description: 'Blog posts',
+        columns: [
+          { name: 'id', type: 'INT', note: 'Primary key' },
+          { name: 'user_id', type: 'INT', note: 'FK → users.id' },
+          { name: 'title', type: 'TEXT', note: '' },
+          { name: 'content', type: 'TEXT', note: '' },
+          { name: 'published', type: 'BOOL', note: 'true/false' },
+          { name: 'created_at', type: 'DATE', note: '' },
+        ],
+        relationships: ['users.id → posts.user_id']
+      },
+      comments: {
+        description: 'Comments on posts',
+        columns: [
+          { name: 'id', type: 'INT', note: 'Primary key' },
+          { name: 'post_id', type: 'INT', note: 'FK → posts.id' },
+          { name: 'user_id', type: 'INT', note: 'FK → users.id' },
+          { name: 'text', type: 'TEXT', note: '' },
+          { name: 'created_at', type: 'DATE', note: '' },
+        ],
+        relationships: ['posts.id → comments.post_id', 'users.id → comments.user_id']
+      },
+      orders: {
+        description: 'Purchase orders',
+        columns: [
+          { name: 'id', type: 'INT', note: 'Primary key' },
+          { name: 'user_id', type: 'INT', note: 'FK → users.id' },
+          { name: 'total', type: 'DECIMAL', note: 'Order total' },
+          { name: 'status', type: 'TEXT', note: 'pending, completed' },
+          { name: 'created_at', type: 'DATE', note: '' },
+        ],
+        relationships: ['users.id → orders.user_id']
+      }
+    };
+
+    const moduleTableHints = {
+      'data-flow-basics': ['users'],
+      'crud-concepts': ['users', 'posts'],
+      'where-filtering': ['posts', 'users'],
+      'join-flow': ['users', 'posts', 'comments'],
+      'aggregation': ['posts', 'comments'],
+      'pg-types': ['users'],
+      'returning-clause': ['users'],
+      'cte-flow': ['users'],
+      'upsert': ['users'],
+      'transactions': ['orders'],
+      'supabase-architecture': ['users'],
+      'rls-concept': ['posts'],
+      'client-patterns': ['posts'],
+    };
+
+    // SQL Executor
+    const executeSQL = (sql, db = sampleDatabase) => {
+      try {
+        const normalizedSQL = sql.trim().toLowerCase().replace(/\s+/g, ' ');
+        
+        if (normalizedSQL.startsWith('select')) return executeSelect(sql, db);
+        if (normalizedSQL.startsWith('insert')) return executeInsert(sql, db);
+        if (normalizedSQL.startsWith('update')) return executeUpdate(sql, db);
+        if (normalizedSQL.startsWith('delete')) return executeDelete(sql, db);
+        
+        return { error: 'Unsupported query type. Try SELECT, INSERT, UPDATE, or DELETE.' };
+      } catch (e) {
+        return { error: e.message };
+      }
+    };
+
+    const executeSelect = (sql, db) => {
+      const normalized = sql.replace(/\s+/g, ' ').trim();
+      
+      const fromMatch = normalized.match(/from\s+(\w+)/i);
+      if (!fromMatch) return { error: 'Missing FROM clause' };
+      
+      const tableName = fromMatch[1].toLowerCase();
+      if (!db[tableName]) return { error: `Table '${tableName}' not found. Available: ${Object.keys(db).join(', ')}` };
+      
+      let results = [...db[tableName]];
+      
+      const joinMatch = normalized.match(/join\s+(\w+)\s+on\s+(\w+)\.(\w+)\s*=\s*(\w+)\.(\w+)/i);
+      if (joinMatch) {
+        const joinTable = joinMatch[1].toLowerCase();
+        if (!db[joinTable]) return { error: `Join table '${joinTable}' not found` };
+        
+        const leftTable = joinMatch[2].toLowerCase();
+        const leftCol = joinMatch[3].toLowerCase();
+        const rightTable = joinMatch[4].toLowerCase();
+        const rightCol = joinMatch[5].toLowerCase();
+        
+        const newResults = [];
+        results.forEach(leftRow => {
+          db[joinTable].forEach(rightRow => {
+            const leftVal = leftTable === tableName ? leftRow[leftCol] : rightRow[leftCol];
+            const rightVal = rightTable === tableName ? leftRow[rightCol] : rightRow[rightCol];
+            
+            if (leftVal === rightVal) {
+              newResults.push({ ...leftRow, ...rightRow, [`${joinTable}_id`]: rightRow.id });
+            }
+          });
+        });
+        results = newResults;
+      }
+      
+      const whereMatch = normalized.match(/where\s+(.+?)(?:\s+order|\s+group|\s+limit|$)/i);
+      if (whereMatch) {
+        const condition = whereMatch[1].trim();
+        results = applyWhere(results, condition);
+      }
+      
+      const orderMatch = normalized.match(/order\s+by\s+(\w+)(?:\s+(asc|desc))?/i);
+      if (orderMatch) {
+        const orderCol = orderMatch[1];
+        const orderDir = (orderMatch[2] || 'asc').toLowerCase();
+        results.sort((a, b) => {
+          if (a[orderCol] < b[orderCol]) return orderDir === 'asc' ? -1 : 1;
+          if (a[orderCol] > b[orderCol]) return orderDir === 'asc' ? 1 : -1;
+          return 0;
+        });
+      }
+      
+      const limitMatch = normalized.match(/limit\s+(\d+)/i);
+      if (limitMatch) {
+        results = results.slice(0, parseInt(limitMatch[1]));
+      }
+      
+      const groupMatch = normalized.match(/group\s+by\s+(\w+)/i);
+      if (groupMatch) {
+        const groupCol = groupMatch[1];
+        const grouped = {};
+        results.forEach(row => {
+          const key = row[groupCol];
+          if (!grouped[key]) grouped[key] = { [groupCol]: key, count: 0 };
+          grouped[key].count++;
+        });
+        results = Object.values(grouped);
+      }
+      
+      const selectMatch = normalized.match(/select\s+(.+?)\s+from/i);
+      if (selectMatch) {
+        const cols = selectMatch[1].trim();
+        if (cols !== '*') {
+          if (cols.toLowerCase().includes('count(*)')) {
+            return { results: [{ count: results.length }], rowCount: 1 };
+          }
+          
+          const colNames = cols.split(',').map(c => c.trim().split(/\s+as\s+/i)).map(parts => ({
+            original: parts[0].replace(/^\w+\./, ''),
+            alias: parts[1] || parts[0].replace(/^\w+\./, '')
+          }));
+          
+          results = results.map(row => {
+            const newRow = {};
+            colNames.forEach(({ original, alias }) => {
+              if (row.hasOwnProperty(original)) {
+                newRow[alias] = row[original];
+              }
+            });
+            return newRow;
+          });
+        }
+      }
+      
+      return { results, rowCount: results.length };
+    };
+
+    const applyWhere = (results, condition) => {
+      return results.filter(row => {
+        const andParts = condition.split(/\s+and\s+/i);
+        return andParts.every(part => evaluateCondition(row, part.trim()));
+      });
+    };
+
+    const evaluateCondition = (row, condition) => {
+      let match = condition.match(/(\w+)\s*=\s*'([^']+)'/i);
+      if (match) return String(row[match[1]]) === match[2];
+      
+      match = condition.match(/(\w+)\s*=\s*(\d+)/i);
+      if (match) return row[match[1]] === parseInt(match[2]);
+      
+      match = condition.match(/(\w+)\s*!=\s*'([^']+)'/i);
+      if (match) return String(row[match[1]]) !== match[2];
+      
+      match = condition.match(/(\w+)\s*>\s*(\d+)/i);
+      if (match) return row[match[1]] > parseInt(match[2]);
+      
+      match = condition.match(/(\w+)\s*<\s*(\d+)/i);
+      if (match) return row[match[1]] < parseInt(match[2]);
+      
+      match = condition.match(/(\w+)\s+like\s+'%([^%]+)%'/i);
+      if (match) return String(row[match[1]]).toLowerCase().includes(match[2].toLowerCase());
+      
+      match = condition.match(/(\w+)\s*=\s*(true|false)/i);
+      if (match) return row[match[1]] === (match[2].toLowerCase() === 'true');
+      
+      return true;
+    };
+
+    const executeInsert = (sql, db) => {
+      const match = sql.match(/insert\s+into\s+(\w+)/i);
+      if (!match) return { error: 'Invalid INSERT syntax' };
+      
+      const tableName = match[1].toLowerCase();
+      const hasReturning = sql.toLowerCase().includes('returning');
+      const newId = db[tableName] ? Math.max(...db[tableName].map(r => r.id)) + 1 : 1;
+      const simulatedRow = { id: newId, created_at: new Date().toISOString().split('T')[0] };
+      
+      if (hasReturning) {
+        return { results: [simulatedRow], rowCount: 1, message: 'INSERT with RETURNING (simulated)' };
+      }
+      return { results: [], rowCount: 1, message: 'INSERT successful. Use RETURNING to get the row!' };
+    };
+
+    const executeUpdate = (sql) => {
+      const hasReturning = sql.toLowerCase().includes('returning');
+      return { 
+        results: hasReturning ? [{ id: 1, updated: true }] : [], 
+        rowCount: 1,
+        message: hasReturning ? 'UPDATE with RETURNING (simulated)' : 'UPDATE successful (simulated)'
+      };
+    };
+
+    const executeDelete = (sql) => {
+      const hasReturning = sql.toLowerCase().includes('returning');
+      return { 
+        results: hasReturning ? [{ id: 1, deleted: true }] : [], 
+        rowCount: 1,
+        message: hasReturning ? 'DELETE with RETURNING (simulated)' : 'DELETE successful (simulated)'
+      };
+    };
+
+    // ============================================================
+    // SANDBOX CHALLENGES
+    // ============================================================
+
+    const sandboxChallenges = [
+      { id: 'c1', difficulty: 'easy', prompt: 'Find all users who are NOT admins', hint: "Use != or <> for not equal", validator: (r) => r.results?.length === 3 && r.results.every(u => u.role !== 'admin') },
+      { id: 'c2', difficulty: 'easy', prompt: 'Count the total number of posts', hint: 'Use COUNT(*)', validator: (r) => r.results?.[0]?.count === 5 },
+      { id: 'c3', difficulty: 'medium', prompt: 'Find all published posts with their author names', hint: 'JOIN users and posts, filter by published', validator: (r) => r.results?.length === 4 && r.results[0]?.name && r.results[0]?.title },
+      { id: 'c4', difficulty: 'medium', prompt: 'Count how many posts each user has written', hint: 'GROUP BY user_id with COUNT', validator: (r) => r.results?.length >= 3 && r.results[0]?.count !== undefined },
+      { id: 'c5', difficulty: 'easy', prompt: 'Get the 3 most recent orders', hint: 'ORDER BY created_at DESC LIMIT 3', validator: (r) => r.results?.length === 3 },
+    ];
+
+    // ============================================================
+    // CURRICULUM DATA
+    // ============================================================
+
+    const curriculum = {
+      foundations: {
+        id: 'foundations',
+        title: 'SQL Foundations',
+        icon: Database,
+        description: 'Core concepts that transfer from SQLite to any SQL database',
+        modules: [
+          {
+            id: 'data-flow-basics',
+            title: 'Query Data Flow',
+            type: 'dataflow',
+            why: "Understanding how your query travels through the database engine helps you debug slow queries and predict behavior.",
+            pitfalls: ["Assuming queries run instantly", "Not understanding the query planner", "Forgetting network latency for results"],
+            content: {
+              description: 'How a SELECT query flows through the database system',
+              nodes: [
+                { id: 'client', label: 'Your Code', type: 'boundary', x: 50, y: 50 },
+                { id: 'query', label: 'SQL Query', type: 'flow', x: 180, y: 50 },
+                { id: 'parser', label: 'Parser', type: 'process', x: 310, y: 50 },
+                { id: 'planner', label: 'Planner', type: 'process', x: 310, y: 130 },
+                { id: 'executor', label: 'Executor', type: 'process', x: 310, y: 210 },
+                { id: 'storage', label: 'Storage', type: 'boundary', x: 450, y: 130 },
+                { id: 'result', label: 'Results', type: 'flow', x: 180, y: 210 },
+              ],
+              edges: [
+                { from: 'client', to: 'query' }, { from: 'query', to: 'parser' },
+                { from: 'parser', to: 'planner' }, { from: 'planner', to: 'executor' },
+                { from: 'executor', to: 'storage' }, { from: 'storage', to: 'executor' },
+                { from: 'executor', to: 'result' }, { from: 'result', to: 'client' },
+              ],
+              reveals: {
+                client: 'Your application code - the query starts here.',
+                query: 'Just a text string at this point.',
+                parser: 'Validates syntax, checks tables exist, verifies permissions.',
+                planner: 'Decides HOW to execute: which index, join order. Use EXPLAIN to see.',
+                executor: 'Runs the plan step-by-step. Most time spent here.',
+                storage: 'Reads data from disk or cache.',
+                result: 'Data streams back row-by-row.',
+              }
+            },
+            exercises: [
+              { id: 'ex1', prompt: 'Select all columns from the users table:', hint: 'Use SELECT * FROM tablename', starterCode: 'SELECT ', solution: 'SELECT * FROM users', validator: (result) => result.results?.length === 4 }
+            ]
+          },
+          {
+            id: 'crud-concepts',
+            title: 'CRUD Operations',
+            type: 'conceptmap',
+            why: "CRUD (Create, Read, Update, Delete) are the four fundamental operations. Every feature maps to CRUD.",
+            pitfalls: ["UPDATE without WHERE affects ALL rows", "DELETE is permanent", "INSERT can fail on constraints"],
+            content: {
+              central: 'SQL Operations',
+              branches: [
+                { label: 'CREATE (INSERT)', color: '#22c55e', details: 'Adds new rows.', syntax: "INSERT INTO users (name, email)\nVALUES ('Alice', 'a@ex.com')", children: ['Single row', 'Multi-row', 'INSERT...SELECT'] },
+                { label: 'READ (SELECT)', color: '#3b82f6', details: 'Retrieves data.', syntax: "SELECT name FROM users\nWHERE role = 'admin'", children: ['WHERE', 'ORDER BY', 'GROUP BY', 'JOIN'] },
+                { label: 'UPDATE', color: '#f59e0b', details: 'Modifies rows. Always use WHERE!', syntax: "UPDATE users SET role = 'mod'\nWHERE id = 5", children: ['Set columns', 'With conditions'] },
+                { label: 'DELETE', color: '#ef4444', details: 'Removes rows permanently.', syntax: "DELETE FROM users\nWHERE id = 5", children: ['With WHERE', 'TRUNCATE', 'Soft delete'] }
+              ]
+            },
+            exercises: [
+              { id: 'crud-select', prompt: 'Select just name and email from users:', hint: 'List columns instead of *', starterCode: 'SELECT ', solution: 'SELECT name, email FROM users', validator: (r) => r.results?.[0]?.name && r.results?.[0]?.email && !r.results?.[0]?.id },
+              { id: 'crud-where', prompt: "Find users with role 'admin':", hint: "WHERE role = 'value'", starterCode: 'SELECT * FROM users WHERE ', solution: "SELECT * FROM users WHERE role = 'admin'", validator: (r) => r.results?.length === 1 && r.results[0].role === 'admin' }
+            ]
+          },
+          {
+            id: 'join-flow',
+            title: 'JOIN Operations',
+            type: 'dataflow',
+            why: "Real data lives in multiple tables. JOINs combine related data in a single query.",
+            pitfalls: ["Missing JOIN condition = cartesian product", "Wrong JOIN type loses rows", "Ambiguous columns need table.column"],
+            content: {
+              description: 'How JOINs combine rows from multiple tables',
+              nodes: [
+                { id: 'tableA', label: 'users (4)', type: 'boundary', x: 50, y: 50 },
+                { id: 'tableB', label: 'posts (5)', type: 'boundary', x: 50, y: 170 },
+                { id: 'condition', label: 'ON\nusers.id =\nposts.user_id', type: 'flow', x: 200, y: 110 },
+                { id: 'inner', label: 'INNER JOIN', type: 'process', x: 350, y: 50 },
+                { id: 'left', label: 'LEFT JOIN', type: 'process', x: 350, y: 150 },
+                { id: 'result', label: 'Combined', type: 'boundary', x: 500, y: 100 },
+              ],
+              edges: [
+                { from: 'tableA', to: 'condition' }, { from: 'tableB', to: 'condition' },
+                { from: 'condition', to: 'inner' }, { from: 'condition', to: 'left' },
+                { from: 'inner', to: 'result' }, { from: 'left', to: 'result' },
+              ],
+              reveals: {
+                tableA: 'The "left" table in your JOIN.',
+                tableB: 'The "right" table with foreign key.',
+                condition: 'ON clause defines how rows match.',
+                inner: 'INNER: Only matching rows returned.',
+                left: 'LEFT: All from left + matches (NULLs where no match).',
+                result: 'Columns from BOTH tables combined.',
+              }
+            },
+            exercises: [
+              { id: 'join-basic', prompt: 'Join users with posts to see who wrote each:', hint: 'JOIN posts ON users.id = posts.user_id', starterCode: 'SELECT users.name, posts.title FROM users ', solution: 'SELECT users.name, posts.title FROM users JOIN posts ON users.id = posts.user_id', validator: (r) => r.results?.length === 5 && r.results[0]?.name && r.results[0]?.title }
+            ]
+          }
+        ]
+      },
+      postgres: {
+        id: 'postgres',
+        title: 'PostgreSQL Specifics',
+        icon: Server,
+        description: 'Features unique to PostgreSQL',
+        modules: [
+          {
+            id: 'returning-clause',
+            title: 'RETURNING Clause',
+            type: 'dataflow',
+            why: "Get inserted/updated data back in one query. No second round-trip needed.",
+            pitfalls: ["SQLite habit: INSERT then SELECT", "Forgetting RETURNING = extra queries"],
+            content: {
+              description: 'Get data back from write operations',
+              nodes: [
+                { id: 'sqlite', label: 'SQLite Way', type: 'boundary', x: 50, y: 40 },
+                { id: 'insert1', label: 'INSERT...', type: 'process', x: 50, y: 110 },
+                { id: 'select1', label: 'SELECT last_id', type: 'process', x: 50, y: 180 },
+                { id: 'pg', label: 'Postgres Way', type: 'boundary', x: 280, y: 40 },
+                { id: 'insert2', label: 'INSERT...\nRETURNING *', type: 'process', x: 280, y: 130 },
+                { id: 'result', label: 'Row returned', type: 'flow', x: 450, y: 130 },
+              ],
+              edges: [
+                { from: 'sqlite', to: 'insert1' }, { from: 'insert1', to: 'select1' },
+                { from: 'pg', to: 'insert2' }, { from: 'insert2', to: 'result' },
+              ],
+              reveals: {
+                sqlite: 'Two queries, race condition risk.',
+                insert1: 'INSERT only returns success/fail.',
+                select1: 'Second query to get inserted data.',
+                pg: 'One atomic query does both.',
+                insert2: 'RETURNING * or specific columns.',
+                result: 'Complete row with generated values.',
+              }
+            },
+            exercises: [
+              { id: 'ret1', prompt: 'Insert a user and get the row back:', hint: 'Add RETURNING *', starterCode: "INSERT INTO users (name, email) VALUES ('New', 'n@ex.com') ", solution: "INSERT INTO users (name, email) VALUES ('New', 'n@ex.com') RETURNING *", validator: (r) => r.message?.includes('RETURNING') }
+            ]
+          }
+        ]
+      },
+      supabase: {
+        id: 'supabase',
+        title: 'Supabase Layer',
+        icon: Cloud,
+        description: 'The platform between your app and PostgreSQL',
+        modules: [
+          {
+            id: 'rls-concept',
+            title: 'Row Level Security',
+            type: 'conceptmap',
+            why: "API is public. RLS ensures users only see their own data at the database level.",
+            pitfalls: ["Tables are PUBLIC by default", "Enabling RLS with no policies = locked out", "service_role key bypasses RLS"],
+            content: {
+              central: 'Row Level Security',
+              branches: [
+                { label: 'The Problem', color: '#ef4444', details: 'API is public. Anyone could query any data.', syntax: "-- Without RLS:\nsupabase.from('users').select('*')\n-- Returns ALL users!", children: ['Public API key', 'No middleware', 'Need DB security'] },
+                { label: 'Enable RLS', color: '#3b82f6', details: 'First: turn on RLS. Blocks ALL access until policies added.', syntax: "ALTER TABLE posts\n  ENABLE ROW LEVEL SECURITY;", children: ['Per-table', 'Blocks all', 'Add policies'] },
+                { label: 'auth.uid()', color: '#8b5cf6', details: 'Returns current user ID from JWT token.', syntax: "USING (user_id = auth.uid())", children: ['From JWT', 'NULL if anon', 'Unfakeable'] },
+                { label: 'Policy Types', color: '#22c55e', details: 'Different policies for different operations.', syntax: "CREATE POLICY \"read\"\n  ON posts FOR SELECT\n  USING (user_id = auth.uid());", children: ['SELECT', 'INSERT', 'UPDATE', 'DELETE'] }
+              ]
+            },
+            exercises: []
+          }
+        ]
+      },
+      migration: {
+        id: 'migration',
+        title: 'Migration Path',
+        icon: RefreshCw,
+        description: 'Moving from SQLite to Supabase',
+        modules: [
+          {
+            id: 'migration-faults',
+            title: 'Migration Fault Tree',
+            type: 'faulttree',
+            why: "Know failure modes in advance to prevent or recover quickly.",
+            pitfalls: [],
+            content: {
+              root: 'Migration Fails',
+              branches: [
+                { fault: 'Schema Errors', icon: 'warning', causes: [
+                  { cause: 'Type mismatch', detail: 'SQLite loosely typed, Postgres strict.', fix: 'Clean/cast data first.' },
+                  { cause: 'NULL in PRIMARY KEY', detail: 'SQLite allows, Postgres doesn\'t.', fix: 'Find and fix NULLs.' },
+                  { cause: 'Reserved words', detail: 'Column "user" or "order" fails.', fix: 'Rename columns.' }
+                ]},
+                { fault: 'Security Errors', icon: 'error', causes: [
+                  { cause: 'No RLS enabled', detail: 'Table publicly accessible!', fix: 'Enable RLS before data.' },
+                  { cause: 'Service key exposed', detail: 'In client code = bypasses RLS.', fix: 'Use anon key in browser.' }
+                ]}
+              ]
+            },
+            exercises: []
+          }
+        ]
+      }
+    };
+
+    // ============================================================
+    // KEYBOARD HOOK
+    // ============================================================
+
+    const useKeyboardNav = (handlers) => {
+      useEffect(() => {
+        const handleKeyDown = (e) => {
+          if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+          const key = e.key.toLowerCase();
+          if (handlers[key]) {
+            e.preventDefault();
+            handlers[key]();
+          }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+      }, [handlers]);
+    };
+
+    // ============================================================
+    // EXPORT UTILITIES
+    // ============================================================
+
+    const generateMarkdownExport = (progress, notes, curriculum) => {
+      let md = `# SQL Learning Reference\n\nGenerated: ${new Date().toLocaleDateString()}\n\n---\n\n`;
+      Object.values(curriculum).forEach(category => {
+        const completed = category.modules.filter(m => progress[m.id]?.complete);
+        if (!completed.length) return;
+        md += `## ${category.title}\n\n`;
+        completed.forEach(module => {
+          md += `### ${module.title}\n\n`;
+          if (module.why) md += `**Why:** ${module.why}\n\n`;
+          if (module.pitfalls?.length) {
+            md += `**Pitfalls:**\n`;
+            module.pitfalls.forEach(p => md += `- ${p}\n`);
+            md += `\n`;
+          }
+          if (notes?.modules?.[module.id]) {
+            md += `**My notes:** ${notes.modules[module.id]}\n\n`;
+          }
+          md += `---\n\n`;
+        });
+      });
+      return md;
+    };
+
+    const downloadFile = (content, filename) => {
+      const blob = new Blob([content], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    };
+
+    // ============================================================
+    // COMPONENTS
+    // ============================================================
+
+    const KeyboardHelp = ({ isOpen, onClose }) => {
+      if (!isOpen) return null;
+      const shortcuts = [
+        { key: 'j', desc: 'Next item' }, { key: 'k', desc: 'Previous item' },
+        { key: 'Enter', desc: 'Expand/Select' }, { key: 'Esc', desc: 'Go back' },
+        { key: 'r', desc: 'Quick review' }, { key: 's', desc: 'Sandbox' },
+        { key: 'n', desc: 'Add note' }, { key: '?', desc: 'This help' },
+      ];
+      return (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50" onClick={onClose}>
+          <div className="bg-slate-800 rounded-lg p-4 max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Keyboard size={18} className="text-blue-400" />
+                <span className="font-bold text-white">Keyboard Shortcuts</span>
+              </div>
+              <button onClick={onClose} className="text-slate-400 hover:text-white"><X size={18} /></button>
+            </div>
+            <div className="space-y-2">
+              {shortcuts.map(s => (
+                <div key={s.key} className="flex items-center justify-between">
+                  <kbd className="px-2 py-1 bg-slate-700 rounded text-sm font-mono text-slate-200">{s.key}</kbd>
+                  <span className="text-sm text-slate-300">{s.desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const NotesEditor = ({ moduleId, notes, onSave, onClose }) => {
+      const [text, setText] = useState(notes?.modules?.[moduleId] || '');
+      return (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50" onClick={onClose}>
+          <div className="bg-slate-800 rounded-lg p-4 max-w-lg w-full" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <MessageSquare size={18} className="text-amber-400" />
+                <span className="font-bold text-white">Notes</span>
+              </div>
+              <button onClick={onClose} className="text-slate-400 hover:text-white"><X size={18} /></button>
+            </div>
+            <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Add notes..." className="w-full h-32 bg-slate-900 text-slate-200 p-3 rounded border border-slate-600 focus:border-amber-500 focus:outline-none resize-none" />
+            <div className="flex justify-end gap-2 mt-3">
+              <button onClick={onClose} className="px-3 py-1.5 text-sm text-slate-400 hover:text-white">Cancel</button>
+              <button onClick={() => { onSave(moduleId, text); onClose(); }} className="px-3 py-1.5 text-sm bg-amber-600 hover:bg-amber-500 text-white rounded">Save</button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const QuickReviewPanel = ({ isOpen, onClose, progress, notes, curriculum, onJumpTo }) => {
+      const [filter, setFilter] = useState('all');
+      if (!isOpen) return null;
+      
+      const completed = [];
+      Object.values(curriculum).forEach(cat => {
+        cat.modules.forEach(m => {
+          if (progress[m.id]?.complete) completed.push({ ...m, category: cat.title });
+        });
+      });
+      
+      return (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50" onClick={onClose}>
+          <div className="bg-slate-800 rounded-lg w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BookOpen size={18} className="text-blue-400" />
+                <span className="font-bold text-white">Quick Review</span>
+              </div>
+              <button onClick={onClose} className="text-slate-400 hover:text-white"><X size={18} /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {completed.length === 0 && <p className="text-slate-400 text-center py-8">No completed modules yet</p>}
+              {completed.map(m => (
+                <button key={m.id} onClick={() => onJumpTo(m)} className="w-full text-left p-3 bg-slate-700 hover:bg-slate-600 rounded-lg">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-medium text-white text-sm">{m.title}</span>
+                    <span className="text-xs text-slate-400">{m.category}</span>
+                  </div>
+                  <p className="text-xs text-slate-400 line-clamp-2">{m.why}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const SQLSandbox = ({ isOpen, onClose }) => {
+      const [code, setCode] = useState('SELECT * FROM users');
+      const [result, setResult] = useState(null);
+      const [challenge, setChallenge] = useState(null);
+      const [completed, setCompleted] = useState([]);
+      const [activeTable, setActiveTable] = useState('users');
+      
+      const runQuery = () => {
+        const r = executeSQL(code);
+        setResult(r);
+        if (challenge && !r.error && challenge.validator(r) && !completed.includes(challenge.id)) {
+          setCompleted([...completed, challenge.id]);
+        }
+      };
+      
+      const randomChallenge = () => {
+        const pool = sandboxChallenges.filter(c => !completed.includes(c.id));
+        setChallenge(pool.length ? pool[Math.floor(Math.random() * pool.length)] : sandboxChallenges[Math.floor(Math.random() * sandboxChallenges.length)]);
+        setCode('');
+        setResult(null);
+      };
+      
+      if (!isOpen) return null;
+      
+      return (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-2 z-50" onClick={onClose}>
+          <div className="bg-slate-800 rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Terminal size={18} className="text-green-400" />
+                <span className="font-bold text-white">SQL Sandbox</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={randomChallenge} className="px-2 py-1 text-xs bg-violet-600 hover:bg-violet-500 text-white rounded flex items-center gap-1">
+                  <Shuffle size={12} /> Challenge
+                </button>
+                <button onClick={onClose} className="text-slate-400 hover:text-white"><X size={18} /></button>
+              </div>
+            </div>
+            
+            {challenge && (
+              <div className={`px-4 py-2 border-b ${completed.includes(challenge.id) ? 'bg-green-900/30 border-green-700' : 'bg-violet-900/30 border-violet-700'}`}>
+                <span className={`text-xs px-1.5 py-0.5 rounded mr-2 ${challenge.difficulty === 'easy' ? 'bg-green-600' : challenge.difficulty === 'medium' ? 'bg-amber-600' : 'bg-red-600'} text-white`}>{challenge.difficulty}</span>
+                <span className="text-white text-sm">{challenge.prompt}</span>
+                <p className="text-xs text-slate-400 mt-1">💡 {challenge.hint}</p>
+              </div>
+            )}
+            
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+              <div className="w-full md:w-56 border-b md:border-b-0 md:border-r border-slate-700 p-3 overflow-y-auto">
+                <p className="text-xs text-slate-400 mb-2">TABLES</p>
+                <div className="flex md:flex-col gap-1 flex-wrap">
+                  {Object.keys(sampleDatabase).map(t => (
+                    <button key={t} onClick={() => setActiveTable(t)} className={`px-2 py-1 text-xs rounded ${activeTable === t ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-300'}`}>
+                      {t} ({sampleDatabase[t].length})
+                    </button>
+                  ))}
+                </div>
+                {activeTable && (
+                  <div className="mt-3 space-y-0.5">
+                    {schemaDefinitions[activeTable].columns.map(c => (
+                      <div key={c.name} className="text-xs"><span className="text-emerald-400 font-mono">{c.name}</span> <span className="text-slate-500">{c.type}</span></div>
+                    ))}
+                  </div>
+                )}
+                <div className="mt-3 pt-3 border-t border-slate-700">
+                  <p className="text-xs text-slate-400">Challenges: {completed.length}/{sandboxChallenges.length}</p>
+                </div>
+              </div>
+              
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="p-3 border-b border-slate-700">
+                  <textarea value={code} onChange={e => setCode(e.target.value)} className="w-full h-24 bg-slate-900 text-green-400 font-mono text-sm p-2 rounded border border-slate-700 focus:border-blue-500 focus:outline-none resize-none" placeholder="SQL query..." />
+                  <button onClick={runQuery} className="mt-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm flex items-center gap-1"><Play size={14} /> Run</button>
+                </div>
+                <div className="flex-1 p-3 overflow-auto">
+                  {result && (
+                    result.error ? <div className="text-red-400 text-sm bg-red-900/30 p-2 rounded">❌ {result.error}</div> : (
+                      <div>
+                        {result.message && <p className="text-blue-300 text-sm mb-2">{result.message}</p>}
+                        <p className="text-slate-400 text-xs mb-2">{result.rowCount} row(s)</p>
+                        {result.results?.length > 0 && (
+                          <table className="w-full text-sm">
+                            <thead><tr className="border-b border-slate-600">{Object.keys(result.results[0]).map(c => <th key={c} className="text-left py-1 px-2 text-slate-300 font-mono">{c}</th>)}</tr></thead>
+                            <tbody>{result.results.slice(0, 10).map((r, i) => <tr key={i} className="border-b border-slate-700">{Object.values(r).map((v, j) => <td key={j} className="py-1 px-2 text-slate-300">{String(v)}</td>)}</tr>)}</tbody>
+                          </table>
+                        )}
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const SchemaReference = ({ tables, expanded: init = false }) => {
+      const [expanded, setExpanded] = useState(init);
+      const [active, setActive] = useState(tables?.[0]);
+      if (!tables?.length) return null;
+      
+      return (
+        <div className="border border-slate-600 rounded-lg bg-slate-800/50 mb-3">
+          <button onClick={() => setExpanded(!expanded)} className="w-full px-3 py-2 flex items-center justify-between text-left hover:bg-slate-700/50 rounded-t-lg">
+            <div className="flex items-center gap-2">
+              <Table size={14} className="text-emerald-400" />
+              <span className="text-sm font-medium text-slate-200">Schema ({tables.join(', ')})</span>
+            </div>
+            {expanded ? <ChevronDown size={14} className="text-slate-400" /> : <ChevronRight size={14} className="text-slate-400" />}
+          </button>
+          {expanded && (
+            <div className="px-3 pb-3 pt-1">
+              <div className="flex gap-1 mb-2 flex-wrap">
+                {tables.map(t => <button key={t} onClick={() => setActive(t)} className={`px-2 py-1 text-xs rounded ${active === t ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-300'}`}>{t}</button>)}
+              </div>
+              {active && schemaDefinitions[active] && (
+                <div className="bg-slate-900 rounded p-2 text-xs">
+                  {schemaDefinitions[active].columns.map(c => (
+                    <div key={c.name}><span className="text-emerald-400 font-mono">{c.name}</span> <span className="text-blue-300">{c.type}</span> {c.note && <span className="text-slate-500">({c.note})</span>}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    const DatabaseViewer = ({ isOpen, onClose }) => {
+      const [active, setActive] = useState('users');
+      if (!isOpen) return null;
+      
+      return (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50" onClick={onClose}>
+          <div className="bg-slate-800 rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
+              <div className="flex items-center gap-2"><Database size={18} className="text-emerald-400" /><span className="font-bold text-white">Database</span></div>
+              <button onClick={onClose} className="text-slate-400 hover:text-white"><XCircle size={20} /></button>
+            </div>
+            <div className="px-4 py-2 border-b border-slate-700 flex gap-2 flex-wrap">
+              {Object.keys(sampleDatabase).map(t => <button key={t} onClick={() => setActive(t)} className={`px-3 py-1.5 text-sm rounded ${active === t ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-300'}`}>{t} ({sampleDatabase[t].length})</button>)}
+            </div>
+            <div className="flex-1 overflow-auto p-4">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-slate-800"><tr className="border-b border-slate-600">{Object.keys(sampleDatabase[active][0]).map(c => <th key={c} className="text-left py-2 px-2 text-slate-300 font-mono">{c}</th>)}</tr></thead>
+                <tbody>{sampleDatabase[active].map((r, i) => <tr key={i} className="border-b border-slate-700 hover:bg-slate-700/50">{Object.values(r).map((v, j) => <td key={j} className="py-1.5 px-2 text-slate-300">{String(v)}</td>)}</tr>)}</tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const SQLExercise = ({ exercise, onComplete, isComplete }) => {
+      const [code, setCode] = useState(exercise.starterCode);
+      const [result, setResult] = useState(null);
+      const [hint, setHint] = useState(false);
+      const [passed, setPassed] = useState(isComplete);
+      
+      const run = () => {
+        const r = executeSQL(code);
+        setResult(r);
+        if (!r.error && exercise.validator(r)) {
+          setPassed(true);
+          onComplete(exercise.id);
+        }
+      };
+      
+      return (
+        <div className="border border-slate-600 rounded-lg p-3 bg-slate-800/50">
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <p className="text-sm text-slate-200">{exercise.prompt}</p>
+            {passed && <CheckCircle2 size={18} className="text-green-400 flex-shrink-0" />}
+          </div>
+          <textarea value={code} onChange={e => setCode(e.target.value)} disabled={passed} className="w-full bg-slate-900 text-green-400 font-mono text-sm p-2 rounded border border-slate-700 focus:border-blue-500 focus:outline-none resize-none" rows={3} />
+          <div className="flex items-center gap-2 mt-2">
+            <button onClick={run} disabled={passed} className={`px-3 py-1 rounded text-sm flex items-center gap-1 ${passed ? 'bg-green-600/50 text-green-200' : 'bg-blue-600 hover:bg-blue-500 text-white'}`}><Play size={14} /> {passed ? 'Done' : 'Run'}</button>
+            {!passed && <button onClick={() => setHint(!hint)} className="px-3 py-1 rounded text-sm bg-slate-700 hover:bg-slate-600 text-slate-300 flex items-center gap-1"><Lightbulb size={14} /> Hint</button>}
+          </div>
+          {hint && !passed && <p className="text-xs text-amber-300 bg-amber-900/30 p-2 rounded mt-2">💡 {exercise.hint}</p>}
+          {result && (
+            <div className="mt-2 text-xs">
+              {result.error ? <div className="text-red-400 bg-red-900/30 p-2 rounded">❌ {result.error}</div> : (
+                <>
+                  {result.message && <p className="text-blue-300 mb-1">{result.message}</p>}
+                  <p className="text-slate-400 mb-1">{result.rowCount} row(s)</p>
+                  {result.results?.length > 0 && (
+                    <table className="w-full">
+                      <thead><tr className="border-b border-slate-600">{Object.keys(result.results[0]).map(c => <th key={c} className="text-left py-1 px-2 text-slate-300">{c}</th>)}</tr></thead>
+                      <tbody>{result.results.slice(0, 5).map((r, i) => <tr key={i} className="border-b border-slate-700">{Object.values(r).map((v, j) => <td key={j} className="py-1 px-2 text-slate-400">{String(v)}</td>)}</tr>)}</tbody>
+                    </table>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // Visualization Components
+    const DataFlowDiagram = ({ content, revealed, onReveal, frozen }) => {
+      const { nodes, edges, reveals, description } = content;
+      return (
+        <div className="bg-slate-900 rounded-lg p-4">
+          <p className="text-slate-300 text-sm mb-4">{description}</p>
+          <svg viewBox="0 0 600 260" className="w-full h-56">
+            <defs><marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#64748b" /></marker></defs>
+            {edges.map((e, i) => {
+              const f = nodes.find(n => n.id === e.from);
+              const t = nodes.find(n => n.id === e.to);
+              if (!f || !t) return null;
+              return <line key={i} x1={f.x + 55} y1={f.y + 30} x2={t.x + 5} y2={t.y + 30} stroke="#64748b" strokeWidth="2" markerEnd="url(#arrow)" />;
+            })}
+            {nodes.map(n => {
+              const isRev = revealed.includes(n.id);
+              const hasRev = reveals?.[n.id];
+              const colors = { boundary: { fill: '#1e40af', stroke: '#3b82f6' }, flow: { fill: '#065f46', stroke: '#10b981' }, process: { fill: '#7c2d12', stroke: '#f97316' } };
+              const c = colors[n.type] || colors.process;
+              return (
+                <g key={n.id}>
+                  <rect x={n.x} y={n.y} width="110" height="60" rx="6" fill={c.fill} stroke={isRev ? '#fff' : c.stroke} strokeWidth={isRev ? 3 : 2} className={hasRev && !frozen ? 'cursor-pointer hover:opacity-80' : ''} onClick={() => hasRev && !frozen && onReveal(n.id)} />
+                  <text x={n.x + 55} y={n.y + 20} textAnchor="middle" fill="white" fontSize="11" className="pointer-events-none">
+                    {n.label.split('\n').map((l, i) => <tspan key={i} x={n.x + 55} dy={i === 0 ? 0 : 13}>{l}</tspan>)}
+                  </text>
+                  {hasRev && !isRev && !frozen && <circle cx={n.x + 100} cy={n.y + 10} r="6" fill="#8b5cf6" className="animate-pulse" />}
+                </g>
+              );
+            })}
+          </svg>
+          {reveals && (
+            <div className="mt-4 space-y-2 max-h-64 overflow-y-auto">
+              {Object.entries(reveals).map(([id, detail]) => {
+                const isRev = revealed.includes(id) || frozen;
+                const node = nodes.find(n => n.id === id);
+                return (
+                  <div key={id} className={`p-3 rounded border ${isRev ? 'bg-slate-800 border-slate-600' : 'bg-slate-800/50 border-slate-700 cursor-pointer hover:border-violet-500'}`} onClick={() => !frozen && !isRev && onReveal(id)}>
+                    <div className="flex items-center gap-2">
+                      {isRev ? <Eye size={14} className="text-green-400" /> : <EyeOff size={14} className="text-slate-500" />}
+                      <span className="text-sm font-medium text-slate-300">{node?.label?.replace(/\n/g, ' ')}</span>
+                    </div>
+                    {isRev && <p className="text-sm text-slate-400 mt-2 ml-6">{detail}</p>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    const ConceptMap = ({ content, revealed, onReveal, frozen }) => {
+      const { central, branches } = content;
+      return (
+        <div className="bg-slate-900 rounded-lg p-4">
+          <div className="flex flex-col items-center">
+            <div className="bg-slate-700 text-white px-5 py-2 rounded-full font-bold mb-4">{central}</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
+              {branches.map((b, i) => {
+                const isRev = revealed.includes(b.label) || frozen;
+                return (
+                  <div key={i} className={`rounded-lg border-2 ${isRev ? '' : 'cursor-pointer hover:opacity-80'}`} style={{ borderColor: b.color }} onClick={() => !frozen && !isRev && onReveal(b.label)}>
+                    <div className="px-3 py-2 font-medium text-white text-sm flex items-center justify-between" style={{ backgroundColor: b.color + '33' }}>
+                      <span>{b.label}</span>
+                      {!isRev && !frozen && <ChevronRight size={14} className="text-slate-400" />}
+                    </div>
+                    {isRev && (
+                      <div className="p-3 bg-slate-800 space-y-2">
+                        <p className="text-slate-300 text-sm">{b.details}</p>
+                        {b.syntax && <pre className="bg-slate-900 text-green-400 p-2 rounded text-xs font-mono whitespace-pre-wrap">{b.syntax}</pre>}
+                        <div className="flex flex-wrap gap-1">
+                          {b.children?.map((c, j) => <span key={j} className="px-2 py-0.5 bg-slate-700 text-slate-300 rounded text-xs">{c}</span>)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const FaultTree = ({ content, revealed, onReveal, frozen }) => {
+      const { root, branches } = content;
+      const icons = { warning: <AlertTriangle size={16} className="text-amber-400" />, error: <XCircle size={16} className="text-red-400" />, info: <Info size={16} className="text-blue-400" /> };
+      return (
+        <div className="bg-slate-900 rounded-lg p-4">
+          <div className="flex justify-center mb-4">
+            <div className="bg-red-900/80 border-2 border-red-500 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2"><Diamond size={18} />{root}</div>
+          </div>
+          <div className="space-y-3">
+            {branches.map((b, i) => {
+              const isRev = revealed.includes(b.fault) || frozen;
+              return (
+                <div key={i} className="border border-slate-700 rounded-lg overflow-hidden">
+                  <div className={`px-3 py-2 bg-slate-800 flex items-center justify-between ${!frozen && !isRev ? 'cursor-pointer hover:bg-slate-700' : ''}`} onClick={() => !frozen && !isRev && onReveal(b.fault)}>
+                    <div className="flex items-center gap-2">{icons[b.icon]}<span className="font-medium text-white text-sm">{b.fault}</span></div>
+                    {isRev ? <ChevronDown size={14} className="text-slate-400" /> : <ChevronRight size={14} className="text-slate-400" />}
+                  </div>
+                  {isRev && (
+                    <div className="divide-y divide-slate-700">
+                      {b.causes.map((c, j) => (
+                        <div key={j} className="p-3 bg-slate-800/50">
+                          <p className="font-medium text-slate-200 text-sm">{c.cause}</p>
+                          <p className="text-xs text-slate-400 mt-1">{c.detail}</p>
+                          <p className="text-xs text-green-300 mt-1 flex items-center gap-1"><CheckCircle2 size={12} /> {c.fix}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    };
+
+    const ModuleView = ({ module, progress, notes, onComplete, onBack, onSaveNote, focusIndex, setFocusIndex }) => {
+      const [revealed, setRevealed] = useState(progress?.revealed || []);
+      const [completedEx, setCompletedEx] = useState(progress?.exercises || []);
+      const [showNotes, setShowNotes] = useState(false);
+      const isComplete = progress?.complete;
+      
+      const getRequired = () => {
+        if (module.type === 'dataflow') return Object.keys(module.content.reveals || {});
+        if (module.type === 'conceptmap') return module.content.branches.map(b => b.label);
+        if (module.type === 'faulttree') return module.content.branches.map(b => b.fault);
+        return [];
+      };
+      
+      const required = getRequired();
+      const allRev = required.every(r => revealed.includes(r));
+      const exercises = module.exercises || [];
+      const allEx = exercises.length === 0 || exercises.every(e => completedEx.includes(e.id));
+      const canComplete = allRev && allEx && !isComplete;
+      
+      useKeyboardNav({
+        'j': () => focusIndex < required.length - 1 && setFocusIndex(focusIndex + 1),
+        'k': () => focusIndex > 0 && setFocusIndex(focusIndex - 1),
+        'enter': () => required[focusIndex] && !revealed.includes(required[focusIndex]) && setRevealed([...revealed, required[focusIndex]]),
+        'n': () => setShowNotes(true),
+      });
+      
+      const renderContent = () => {
+        const props = { content: module.content, revealed, onReveal: id => !revealed.includes(id) && setRevealed([...revealed, id]), frozen: isComplete };
+        if (module.type === 'dataflow') return <DataFlowDiagram {...props} />;
+        if (module.type === 'conceptmap') return <ConceptMap {...props} />;
+        if (module.type === 'faulttree') return <FaultTree {...props} />;
+        return null;
+      };
+      
+      const moduleNotes = notes?.modules?.[module.id] || '';
+      
+      return (
+        <div className="space-y-4">
+          {showNotes && <NotesEditor moduleId={module.id} notes={notes} onSave={onSaveNote} onClose={() => setShowNotes(false)} />}
+          
+          <div className="flex items-center justify-between print-hidden">
+            <button onClick={onBack} className="flex items-center gap-1 text-slate-400 hover:text-white text-sm"><ChevronRight size={16} className="rotate-180" /> Back</button>
+            <button onClick={() => setShowNotes(true)} className={`p-1.5 rounded hover:bg-slate-700 ${moduleNotes ? 'text-amber-400' : 'text-slate-400'}`}><MessageSquare size={16} /></button>
+          </div>
+          
+          <div className="bg-slate-800 rounded-lg p-4">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-white">{module.title}</h2>
+                <div className="flex items-center gap-2 mt-1">
+                  {module.type === 'dataflow' && <Map size={14} className="text-blue-400" />}
+                  {module.type === 'conceptmap' && <GitBranch size={14} className="text-green-400" />}
+                  {module.type === 'faulttree' && <AlertTriangle size={14} className="text-amber-400" />}
+                  <span className="text-xs text-slate-400 capitalize">{module.type}</span>
+                </div>
+              </div>
+              {isComplete && <span className="flex items-center gap-1 text-green-400 text-xs bg-green-900/30 px-2 py-1 rounded"><CheckCircle2 size={12} /> Complete</span>}
+            </div>
+            
+            {module.why && (
+              <div className="mb-4 p-3 bg-blue-900/30 border border-blue-700/50 rounded-lg">
+                <div className="flex items-center gap-2 mb-1"><Lightbulb size={14} className="text-blue-400" /><span className="text-sm font-medium text-blue-300">Why This Matters</span></div>
+                <p className="text-sm text-slate-300">{module.why}</p>
+              </div>
+            )}
+            
+            {module.pitfalls?.length > 0 && (
+              <div className="mb-4 p-3 bg-amber-900/20 border border-amber-700/50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2"><AlertCircle size={14} className="text-amber-400" /><span className="text-sm font-medium text-amber-300">Watch Out</span></div>
+                <ul className="space-y-1">{module.pitfalls.map((p, i) => <li key={i} className="text-xs text-slate-300 flex gap-2"><span className="text-amber-500">•</span>{p}</li>)}</ul>
+              </div>
+            )}
+            
+            {moduleNotes && (
+              <div className="mb-4 p-3 bg-slate-700/50 border border-slate-600 rounded-lg">
+                <div className="flex items-center gap-2 mb-1"><MessageSquare size={14} className="text-amber-400" /><span className="text-sm font-medium text-slate-300">My Notes</span></div>
+                <p className="text-sm text-slate-400">{moduleNotes}</p>
+              </div>
+            )}
+            
+            {renderContent()}
+            
+            {exercises.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-slate-700 print-hidden">
+                <div className="flex items-center gap-2 mb-3"><Terminal size={16} className="text-green-400" /><span className="font-medium text-white">Exercises</span><span className="text-xs text-slate-400">({completedEx.length}/{exercises.length})</span></div>
+                {moduleTableHints[module.id]?.length > 0 && <SchemaReference tables={moduleTableHints[module.id]} />}
+                <div className="space-y-3">{exercises.map(e => <SQLExercise key={e.id} exercise={e} onComplete={id => !completedEx.includes(id) && setCompletedEx([...completedEx, id])} isComplete={completedEx.includes(e.id) || isComplete} />)}</div>
+              </div>
+            )}
+            
+            {!isComplete && (
+              <div className="mt-4 pt-4 border-t border-slate-700 print-hidden flex items-center justify-between">
+                <span className="text-xs text-slate-400">{revealed.length}/{required.length} concepts{exercises.length > 0 && ` • ${completedEx.length}/${exercises.length} exercises`}</span>
+                {canComplete ? (
+                  <button onClick={() => onComplete(module.id, revealed, completedEx)} className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded text-sm flex items-center gap-1"><Check size={14} /> Complete</button>
+                ) : (
+                  <span className="text-xs text-slate-500">{!allRev ? 'Reveal all' : 'Complete exercises'}</span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    const CategoryView = ({ category, progress, onSelectModule, focusIndex, setFocusIndex }) => {
+      const Icon = category.icon;
+      
+      useKeyboardNav({
+        'j': () => focusIndex < category.modules.length - 1 && setFocusIndex(focusIndex + 1),
+        'k': () => focusIndex > 0 && setFocusIndex(focusIndex - 1),
+        'enter': () => category.modules[focusIndex] && onSelectModule(category.modules[focusIndex]),
+      });
+      
+      return (
+        <div className="bg-slate-800 rounded-lg p-4">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-slate-700 rounded-lg"><Icon size={22} className="text-blue-400" /></div>
+            <div><h2 className="font-bold text-white">{category.title}</h2><p className="text-xs text-slate-400">{category.description}</p></div>
+          </div>
+          <div className="space-y-2">
+            {category.modules.map((m, i) => {
+              const done = progress[m.id]?.complete;
+              const focused = i === focusIndex;
+              return (
+                <button key={m.id} onClick={() => onSelectModule(m)} className={`w-full p-3 rounded-lg text-left flex items-center justify-between group ${focused ? 'bg-slate-600 ring-2 ring-blue-500' : 'bg-slate-700 hover:bg-slate-600'}`}>
+                  <div className="flex items-center gap-3">
+                    {done ? <CheckCircle2 size={16} className="text-green-400" /> : <Circle size={16} className="text-slate-500" />}
+                    <div>
+                      <span className="text-white text-sm font-medium">{m.title}</span>
+                      <div className="flex gap-2 mt-0.5">
+                        {m.type === 'dataflow' && <span className="text-xs bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded">Flow</span>}
+                        {m.type === 'conceptmap' && <span className="text-xs bg-green-500/20 text-green-300 px-1.5 py-0.5 rounded">Map</span>}
+                        {m.type === 'faulttree' && <span className="text-xs bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">Fault</span>}
+                        {m.exercises?.length > 0 && <span className="text-xs bg-violet-500/20 text-violet-300 px-1.5 py-0.5 rounded flex items-center gap-0.5"><Code size={10} />{m.exercises.length}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight size={14} className="text-slate-500 group-hover:text-white" />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    };
+
+    const Dashboard = ({ progress, notes, onSelectCategory, onExport, onPrint, focusIndex, setFocusIndex }) => {
+      const categories = Object.values(curriculum);
+      const [showDb, setShowDb] = useState(false);
+      
+      const stats = (() => {
+        let total = 0, complete = 0;
+        categories.forEach(c => c.modules.forEach(m => { total++; if (progress[m.id]?.complete) complete++; }));
+        return { total, complete, percent: total > 0 ? Math.round((complete / total) * 100) : 0 };
+      })();
+      
+      useKeyboardNav({
+        'j': () => focusIndex < categories.length - 1 && setFocusIndex(focusIndex + 1),
+        'k': () => focusIndex > 0 && setFocusIndex(focusIndex - 1),
+        'enter': () => categories[focusIndex] && onSelectCategory(categories[focusIndex]),
+      });
+      
+      return (
+        <div className="space-y-4">
+          <DatabaseViewer isOpen={showDb} onClose={() => setShowDb(false)} />
+          
+          <div className="bg-gradient-to-r from-blue-600 to-violet-600 rounded-lg p-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <h1 className="text-xl font-bold text-white">SQL Learning Journey</h1>
+                <p className="text-blue-100 text-sm mb-3">SQLite → PostgreSQL → Supabase</p>
+              </div>
+              <div className="flex gap-1 print-hidden">
+                <button onClick={onExport} className="p-1.5 bg-white/20 hover:bg-white/30 rounded text-white" title="Export"><Download size={16} /></button>
+                <button onClick={onPrint} className="p-1.5 bg-white/20 hover:bg-white/30 rounded text-white" title="Print"><Printer size={16} /></button>
+              </div>
+            </div>
+            <div className="bg-white/20 rounded-full h-2 overflow-hidden"><div className="bg-white h-full transition-all duration-500" style={{ width: `${stats.percent}%` }} /></div>
+            <p className="text-xs text-blue-100 mt-1">{stats.complete}/{stats.total} ({stats.percent}%)</p>
+          </div>
+          
+          <button onClick={() => setShowDb(true)} className="w-full bg-slate-800 hover:bg-slate-700 rounded-lg p-3 text-left group print-hidden">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2"><Table size={16} className="text-emerald-400" /><span className="font-medium text-white text-sm">Practice Database</span></div>
+              <div className="flex items-center gap-1 text-xs text-slate-400 group-hover:text-emerald-400"><Eye size={12} /> View</div>
+            </div>
+            <div className="flex flex-wrap gap-2">{Object.keys(sampleDatabase).map(t => <span key={t} className="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded">{t}</span>)}</div>
+          </button>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {categories.map((c, i) => {
+              const Icon = c.icon;
+              const count = c.modules.length;
+              const done = c.modules.filter(m => progress[m.id]?.complete).length;
+              const focused = i === focusIndex;
+              return (
+                <button key={c.id} onClick={() => onSelectCategory(c)} className={`rounded-lg p-3 text-left group ${focused ? 'bg-slate-700 ring-2 ring-blue-500' : 'bg-slate-800 hover:bg-slate-700'}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Icon size={20} className="text-blue-400" />
+                    <span className="font-bold text-white text-sm">{c.title}</span>
+                    <ChevronRight size={14} className="text-slate-500 group-hover:text-white ml-auto print-hidden" />
+                  </div>
+                  <p className="text-xs text-slate-400 mb-2">{c.description}</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 bg-slate-700 rounded-full h-1.5 overflow-hidden"><div className="bg-blue-500 h-full" style={{ width: `${(done / count) * 100}%` }} /></div>
+                    <span className="text-xs text-slate-400">{done}/{count}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          
+          <p className="text-xs text-slate-500 text-center print-hidden">Press <kbd className="px-1 bg-slate-700 rounded">?</kbd> for shortcuts</p>
+        </div>
+      );
+    };
+
+    // ============================================================
+    // MAIN APP
+    // ============================================================
+
+    function App() {
+      const [progress, setProgress] = useState({});
+      const [notes, setNotes] = useState({ modules: {}, bookmarks: {} });
+      const [view, setView] = useState('dashboard');
+      const [category, setCategory] = useState(null);
+      const [module, setModule] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [focusIndex, setFocusIndex] = useState(0);
+      const [showHelp, setShowHelp] = useState(false);
+      const [showReview, setShowReview] = useState(false);
+      const [showSandbox, setShowSandbox] = useState(false);
+      
+      useEffect(() => {
+        const p = loadProgress();
+        const n = loadNotes();
+        if (p) setProgress(p);
+        if (n) setNotes(n);
+        setLoading(false);
+      }, []);
+      
+      useEffect(() => { if (!loading) saveProgress(progress); }, [progress, loading]);
+      useEffect(() => { if (!loading) saveNotes(notes); }, [notes, loading]);
+      
+      useKeyboardNav({
+        '?': () => setShowHelp(true),
+        'escape': () => { if (showHelp) setShowHelp(false); else if (showReview) setShowReview(false); else if (showSandbox) setShowSandbox(false); else handleBack(); },
+        'r': () => !showSandbox && setShowReview(true),
+        's': () => !showReview && setShowSandbox(true),
+      });
+      
+      const handleBack = () => {
+        if (view === 'module') { setView('category'); setModule(null); setFocusIndex(0); }
+        else if (view === 'category') { setView('dashboard'); setCategory(null); setFocusIndex(0); }
+      };
+      
+      const handleReset = () => {
+        if (confirm('Reset all progress?')) {
+          setProgress({});
+          setNotes({ modules: {}, bookmarks: {} });
+          localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem(NOTES_KEY);
+        }
+      };
+      
+      const handleJumpTo = (m) => {
+        const cat = Object.values(curriculum).find(c => c.modules.some(mod => mod.id === m.id));
+        if (cat) { setCategory(cat); setModule(m); setView('module'); setShowReview(false); }
+      };
+      
+      if (loading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center"><div className="text-white">Loading...</div></div>;
+      
+      return (
+        <div className="min-h-screen bg-slate-900 p-3 md:p-4">
+          <KeyboardHelp isOpen={showHelp} onClose={() => setShowHelp(false)} />
+          <QuickReviewPanel isOpen={showReview} onClose={() => setShowReview(false)} progress={progress} notes={notes} curriculum={curriculum} onJumpTo={handleJumpTo} />
+          <SQLSandbox isOpen={showSandbox} onClose={() => setShowSandbox(false)} />
+          
+          <div className="max-w-3xl mx-auto">
+            <div className="flex items-center justify-between mb-4 print-hidden">
+              <div className="flex items-center gap-2">
+                {view !== 'dashboard' && <button onClick={handleBack} className="p-1.5 text-slate-400 hover:text-white"><ChevronRight size={18} className="rotate-180" /></button>}
+                <div className="flex items-center gap-2"><Layers size={20} className="text-blue-400" /><span className="font-bold text-white text-sm">SQL Learning</span></div>
+              </div>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setShowReview(true)} className="p-1.5 text-slate-400 hover:text-white" title="Review (R)"><BookOpen size={16} /></button>
+                <button onClick={() => setShowSandbox(true)} className="p-1.5 text-slate-400 hover:text-white" title="Sandbox (S)"><Terminal size={16} /></button>
+                <button onClick={() => setShowHelp(true)} className="p-1.5 text-slate-400 hover:text-white" title="Help (?)"><HelpCircle size={16} /></button>
+                <button onClick={handleReset} className="text-xs text-slate-500 hover:text-slate-300 ml-2">Reset</button>
+              </div>
+            </div>
+            
+            {view === 'dashboard' && <Dashboard progress={progress} notes={notes} onSelectCategory={c => { setCategory(c); setView('category'); setFocusIndex(0); }} onExport={() => downloadFile(generateMarkdownExport(progress, notes, curriculum), 'sql-reference.md')} onPrint={() => window.print()} focusIndex={focusIndex} setFocusIndex={setFocusIndex} />}
+            {view === 'category' && category && <CategoryView category={category} progress={progress} onSelectModule={m => { setModule(m); setView('module'); setFocusIndex(0); }} focusIndex={focusIndex} setFocusIndex={setFocusIndex} />}
+            {view === 'module' && module && <ModuleView module={module} progress={progress[module.id]} notes={notes} onComplete={(id, rev, ex) => setProgress(p => ({ ...p, [id]: { complete: true, revealed: rev, exercises: ex, completedAt: new Date().toISOString() } }))} onBack={handleBack} onSaveNote={(id, text) => setNotes(n => ({ ...n, modules: { ...n.modules, [id]: text } }))} focusIndex={focusIndex} setFocusIndex={setFocusIndex} />}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
